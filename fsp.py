@@ -7,127 +7,131 @@ def dfprint(obj):
     df = DataFrame(obj)
     print(df)
 
-fsp = Blueprint('fsp', __name__)
+fsp = Blueprint('fsp', __name__, url_prefix='/<bank>')
 host = 'http://127.0.0.1:8080'
 chain = []
 db = {}
+reqs = {
+    'paypal': ('ssn', 'dob'),
+    'fidelity': ('ssn', 'address'),
+    'goldman': ('dob', 'address')
+}
 
-@fsp.route('/<bank>/create', methods=['POST'])
+@fsp.route('/create', methods=['POST'])
 def create(bank):
-    data = request.form
-    user = data.get('user')
-    dtypes = data.get('dtypestring').split()
-    infos = []
-    creds = []
+    global chain
+    data = request.get_json()
+    user = data['user']
+    dtypes = reqs[bank]
 
     print('1.', user, 'wants to create an account with', bank)
     print('FSP checks chain')
     print()
-
-    global chain
     commits = [
         x for x in chain 
         if x['user'] == user and x['dtype'] in dtypes
     ]
     df = DataFrame(commits)
-    
+
+    old = []
     if commits:
-        print('2. Some info submitted previously')
-        print('Retrieving corresponding tokens')
+        old = df.dtype
+
+        print(f'2. {bank} found prior submits for {user}')
+        dfprint(old)
         print()
 
-        path = host + '/duo'
-        data = {'dtypes': json.dumps(
-            list(df.dtype)
-        )}
-        tokens = json.loads(
-            requests.post(path, data=data).content
-        )
+    data = {
+        'fsp': bank,
+        'old': list(old),
+        'new': list(set(dtypes) - set(old))
+    }
+    requests.post(host + '/duo', json=data)
 
-        print('3. Present tokens to other FSP and retrieve info')
-        print()
-
-        infos = [
-            json.loads(
-                requests.post(
-                    f'{host}/{commit["holder"]}/present',
-                    data=token
-                ).content
-            )
-            for commit, token in zip(commits, tokens)
-        ]
-
-        remaining = list(set(dtypes) - set(df.dtype))
-    else:
-        print('No priors')
-        print()
-
-        remaining = dtypes
-
-    if remaining:        
-        print('4. FSP asks for unsubmitted info')
-        print()
-
-        path = host + '/prompt'
-        data = {'dtypes': json.dumps(remaining)}
-        creds = json.loads(
-            requests.post(path, data=data).content
-        )
-
-        global db
-        print('5. Store new submits in FSP\'s individual DB')
-        print()
-        if not db.get(bank):
-            db[bank] = []
-        db[bank] += creds        
-
-        chain += [{
-            'holder': bank,
-            'user': user,
-            'dtype': x['dtype']
-        } for x in creds]
-
-        print('6. FSP publishes new info dtypes to chain')
-        dfprint(chain)
-        print()
+    return ''
         
-        print('7. FSP gives tokens for newly submitted info')
-        print()
+@fsp.route('/issue', methods=['POST'])
+def issue(bank):
+    global chain
+    data = request.get_json()
+    creds = data['creds']
+    
+    if not db.get(bank):
+        db[bank] = []
+    db[bank] += creds
 
-        path = host + '/store'
-        accessCreds = [{
-            'user': user,
-            'dtype': dtype
-        } for dtype in remaining]
-
-        data = {'tokens': json.dumps(accessCreds)}
-        requests.post(path, data=data)
-    else:
-        print('All info covered by tokens')
-        print()
-
-    print(f'Collected info for {bank} account creation')
-    dfprint(infos + creds)
+    print(f'8. {bank} stores submitted info in DB')
+    dfprint(db[bank])
     print()
 
-    return 'posted'
+    tokens = [{
+        'holder': bank,
+        'user': cred['user'],
+        'dtype': cred['dtype']
+    } for cred in creds]
+    chain += tokens
 
-@fsp.route('/<bank>/present', methods=['POST'])
+    print(f'9. {bank} publishes about new info to chain')
+    dfprint(chain)
+    print()
+    
+    print(f'10. {bank} gives tokens for new info')
+    print()
+
+    path = host + '/store'
+    data = {'tokens': tokens}
+    requests.post(path, json=data)
+
+    return ''
+        
+@fsp.route('/auth', methods=['POST'])
+def auth(bank):
+    print(f'4. {bank} receives tokens and presents them sequentially to info holders')
+    print()
+
+    data = request.get_json()
+    for token in data:
+        requests.post(f'{host}/{token["holder"]}/present', json={
+            'token': token,
+            'sender': bank
+        })
+
+    return ''
+    
+@fsp.route('/present', methods=['POST'])
 def present(bank):
-    print('3. Present tokens to other FSP and retrieve info')
-    print()
+    data = request.get_json()
+    token = data['token']
+    sender = data['sender']
 
-    data = request.form
-    user = data['user']
-    dtype = data['dtype']
+    print(f'5. {bank} is presented the {token["dtype"]} token from {token["user"]}')
+    print()
 
     table = db[bank]
     for x in table:
-        if x['user'] == user and x['dtype'] == dtype:
+        if x['user'] == token['user'] and x['dtype'] == token['dtype']:
             result = {
-                'user': user,
-                'dtype': dtype,
+                'user': token['user'],
+                'dtype': token['dtype'],
                 'info': x['info']
             }
+            break
+    
+    path = f'{host}/{sender}/respond'
+    requests.post(path, json=result)
 
-    return result
+    return ''
+        
+@fsp.route('/respond', methods=['POST'])
+def respond(bank):
+    data = request.get_json()
+    
+    if not db.get(bank):
+        db[bank] = []
+    db[bank].append(data)
+
+    print(f'6. {bank} stores returned info in DB')
+    dfprint(db[bank])
+    print()
+
+    return ''

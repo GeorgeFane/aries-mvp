@@ -1,0 +1,35 @@
+body {
+    background-color:lightgrey;
+    width: 333px;
+}
+
+h1 {
+    display: flex;
+    background-color: cornflowerblue;
+    color: white;
+    border-radius: 22px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding: 22px;
+}
+
+.section {
+    background-color: white;
+    border-radius: 22px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding: 9px;
+}
+
+.token {
+    display: flex;
+    border-radius: 22px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding: 9px;
+}
+
+input[type=submit] {
+    background-color: green;
+    color: white;
+    border-radius: 9px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    padding: 9px;
+}
