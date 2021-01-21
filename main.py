@@ -1,6 +1,6 @@
 from flask import *
 import requests
-from fsp import fsp, dfprint
+from fsp import fsp, dfprint, client, put
 import json
 import sys
 
@@ -8,8 +8,7 @@ app = Flask(__name__)
 app.register_blueprint(fsp)
 
 host = 'http://127.0.0.1:8080'
-user = 'did:example:3c1yq1k3snydmwwx15enif'
-tokens = []
+user = 'did:example:abcdef'
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
@@ -55,10 +54,12 @@ def wallet():
             print(f'4. {user} issues {dtypes} tokens to {notif["fsp"]}')
             print()
 
+            query = client.query(kind=user)
             data = [
-                token for token in tokens
+                token for token in list(query.fetch())
                 if token['dtype'] in dtypes
             ]
+
 
             path = host + f'/{notif["fsp"]}/auth'
             requests.post(path, json=data)
@@ -66,6 +67,8 @@ def wallet():
         return redirect('/issue')
 
     else:
+        query = client.query(kind=user)
+        tokens = list(query.fetch())
         return render_template('wallet.html', tokens=tokens, notif=notif)
 
 @app.route('/issue', methods=['POST', 'GET'])
@@ -99,12 +102,14 @@ def store():
     print()
 
     data = request.get_json()
+    tokens = data['tokens']
 
-    global tokens
-    tokens += data['tokens']
+    put(tokens, user)
+    query = client.query(kind=user)
+    results = list(query.fetch())
 
     print('Tokens Stored')
-    dfprint(tokens)
+    dfprint(results)
     print()
 
     return ''

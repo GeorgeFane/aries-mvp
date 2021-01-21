@@ -2,15 +2,28 @@ from flask import *
 import requests
 import json
 from pandas import DataFrame
+from google.cloud import datastore
+import os
+
+path = 'contract/datastore-creds.json'
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = path
+client = datastore.Client()
 
 def dfprint(obj):
     df = DataFrame(obj)
     print(df)
 
+def put(creds: list, kind: str):
+    ents = []
+    for cred in creds:
+        key = client.key(kind)
+        ent = datastore.Entity(key)
+        ent.update(cred)
+        ents.append(ent)
+    client.put_multi(ents)
+
 fsp = Blueprint('fsp', __name__, url_prefix='/<bank>')
 host = 'http://127.0.0.1:8080'
-chain = []
-db = {}
 reqs = {
     'paypal': ('ssn', 'dob'),
     'fidelity': ('ssn', 'address'),
@@ -19,7 +32,6 @@ reqs = {
 
 @fsp.route('/create', methods=['POST'])
 def create(bank):
-    global chain
     data = request.get_json()
     user = data['user']
     dtypes = reqs[bank]
@@ -27,9 +39,12 @@ def create(bank):
     print('1.', user, 'wants to create an account with', bank)
     print('FSP checks chain')
     print()
+
+    query = client.query(kind='chain')
+    query.add_filter('user', '=', user)
     commits = [
-        x for x in chain 
-        if x['user'] == user and x['dtype'] in dtypes
+        result for result in list(query.fetch()) 
+        if result['dtype'] in dtypes
     ]
     df = DataFrame(commits)
 
@@ -52,16 +67,15 @@ def create(bank):
         
 @fsp.route('/issue', methods=['POST'])
 def issue(bank):
-    global chain
     data = request.get_json()
     creds = data['creds']
-    
-    if not db.get(bank):
-        db[bank] = []
-    db[bank] += creds
+
+    put(creds, bank)
+    query = client.query(kind=bank)
+    results = list(query.fetch())
 
     print(f'8. {bank} stores submitted info in DB')
-    dfprint(db[bank])
+    dfprint(results)
     print()
 
     tokens = [{
@@ -69,7 +83,10 @@ def issue(bank):
         'user': cred['user'],
         'dtype': cred['dtype']
     } for cred in creds]
-    chain += tokens
+    put(tokens, 'chain')
+
+    query = client.query(kind='chain')
+    chain = list(query.fetch())
 
     print(f'9. {bank} publishes about new info to chain')
     dfprint(chain)
@@ -107,15 +124,10 @@ def present(bank):
     print(f'5. {bank} is presented the {token["dtype"]} token from {token["user"]}')
     print()
 
-    table = db[bank]
-    for x in table:
-        if x['user'] == token['user'] and x['dtype'] == token['dtype']:
-            result = {
-                'user': token['user'],
-                'dtype': token['dtype'],
-                'info': x['info']
-            }
-            break
+    query = client.query(kind=bank)
+    query.add_filter('user', '=', token['user'])
+    query.add_filter('dtype', '=', token['dtype'])
+    result = list(query.fetch())[0]
     
     path = f'{host}/{sender}/respond'
     requests.post(path, json=result)
@@ -125,13 +137,14 @@ def present(bank):
 @fsp.route('/respond', methods=['POST'])
 def respond(bank):
     data = request.get_json()
-    
-    if not db.get(bank):
-        db[bank] = []
-    db[bank].append(data)
+
+    put([data], bank)
+
+    query = client.query(kind=bank)
+    results = list(query.fetch())
 
     print(f'6. {bank} stores returned info in DB')
-    dfprint(db[bank])
+    dfprint(results)
     print()
 
     return ''
