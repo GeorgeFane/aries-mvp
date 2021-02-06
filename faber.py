@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import time
+import requests
 
 from qrcode import QRCode
 
@@ -190,7 +191,8 @@ async def main(
         # Create a schema
         with log_timer("Publish schema/cred def duration:"):
             log_status("#3/4 Create a new schema/cred def on the ledger")
-            version = format(
+            version = '1.1.1'
+            format(
                 "%d.%d.%d"
                 % (
                     random.randint(1, 101),
@@ -198,18 +200,24 @@ async def main(
                     random.randint(1, 101),
                 )
             )
-            (
-                _,  # schema id
-                credential_definition_id,
-            ) = await agent.register_schema_and_creddef(
-                "degree schema",
+
+            # schema id
+            (_, credential_definition_id) = await agent.register_schema_and_creddef(
+                "address",
                 version,
-                ["name", "date", "degree", "age", "timestamp"],
+                'address'.split(),
                 support_revocation=revocation,
                 revocation_registry_size=TAILS_FILE_COUNT if revocation else None,
             )
 
-        # TODO add an additional credential for Student ID
+            # schema id
+            (a, b) = await agent.register_schema_and_creddef(
+                "ssn",
+                version,
+                'ssn'.split(),
+                support_revocation=revocation,
+                revocation_registry_size=TAILS_FILE_COUNT if revocation else None,
+            )
 
         with log_timer("Generate invitation duration:"):
             # Generate an invitation
@@ -269,11 +277,16 @@ async def main(
 
                 # TODO define attributes to send for credential
                 agent.cred_attrs[credential_definition_id] = {
-                    "name": "Alice Smith",
-                    "date": "2018-05-28",
-                    "degree": "Maths",
-                    "age": "24",
+                    'ssn': '',
+                    'dob': '',
+                    'address': '',
                     "timestamp": str(int(time.time())),
+
+                    #"name": "Alice Smith",
+                    #"date": "2018-05-28",
+                    #"degree": "Maths",
+                    #"age": "24",
+                    #"timestamp": str(int(time.time())),
                 }
 
                 cred_preview = {
@@ -297,9 +310,12 @@ async def main(
             elif option == "2":
                 log_status("#20 Request proof of degree from alice")
                 req_attrs = [
-                    {"name": "name", "restrictions": [{"issuer_did": agent.did}]},
-                    {"name": "date", "restrictions": [{"issuer_did": agent.did}]},
+                    {"name": "ssn", "restrictions": [{"issuer_did": agent.did}]},
+                    {"name": "address", "restrictions": [{"issuer_did": agent.did}]},
                 ]
+                #req_attrs = [{"name": x} for x in input('dtypes: ').split()]
+
+                '''
                 if revocation:
                     req_attrs.append(
                         {
@@ -326,6 +342,8 @@ async def main(
                         "restrictions": [{"issuer_did": agent.did}],
                     }
                 ]
+                '''
+
                 indy_proof_request = {
                     "name": "Proof of Education",
                     "version": "1.0",
@@ -334,7 +352,7 @@ async def main(
                     },
                     "requested_predicates": {
                         f"0_{req_pred['name']}_GE_uuid": req_pred
-                        for req_pred in req_preds
+                        for req_pred in [] #req_preds
                     },
                 }
 
@@ -345,8 +363,9 @@ async def main(
                     "proof_request": indy_proof_request,
                     "trace": exchange_tracing,
                 }
-                await agent.admin_POST(
-                    "/present-proof/send-request", proof_request_web_request
+                requests.post(
+                    "http://0.0.0.0:8021/present-proof/send-request", 
+                    json=proof_request_web_request
                 )
 
             elif option == "3":

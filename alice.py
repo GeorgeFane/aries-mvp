@@ -128,12 +128,9 @@ class AliceAgent(DemoAgent):
                 credentials = await self.admin_GET(
                     f"/present-proof/records/{presentation_exchange_id}/credentials"
                 )
+
                 if credentials:
-                    for row in sorted(
-                        credentials,
-                        key=lambda c: int(c["cred_info"]["attrs"]["timestamp"]),
-                        reverse=True,
-                    ):
+                    for row in credentials:
                         for referent in row["presentation_referents"]:
                             if referent not in credentials_by_reft:
                                 credentials_by_reft[referent] = row
@@ -141,20 +138,17 @@ class AliceAgent(DemoAgent):
                 for referent in presentation_request["requested_attributes"]:
                     if referent in credentials_by_reft:
                         revealed[referent] = {
-                            "cred_id": credentials_by_reft[referent]["cred_info"][
-                                "referent"
-                            ],
+                            "cred_id": credentials_by_reft[referent]["cred_info"]["referent"],
+                            "cred_info": credentials_by_reft[referent]["cred_info"]["attrs"][referent[2:-5]],
                             "revealed": True,
                         }
                     else:
-                        self_attested[referent] = "my self-attested value"
+                        self_attested[referent] = 'self-attested'
 
                 for referent in presentation_request["requested_predicates"]:
                     if referent in credentials_by_reft:
                         predicates[referent] = {
-                            "cred_id": credentials_by_reft[referent]["cred_info"][
-                                "referent"
-                            ]
+                            "cred_id": credentials_by_reft[referent]["cred_info"]["referent"]
                         }
 
                 log_status("#25 Generate the proof")
@@ -163,6 +157,8 @@ class AliceAgent(DemoAgent):
                     "requested_attributes": revealed,
                     "self_attested_attributes": self_attested,
                 }
+
+                log_json(request, label="Proof:")
 
                 log_status("#26 Send the proof to X")
                 await self.admin_POST(
@@ -268,6 +264,8 @@ async def main(
         await input_invitation(agent)
 
         async for option in prompt_loop(
+            "   (1) Show Credentials\n"
+            "   (2) Present Credentials\n"
             "   (3) Send Message\n"
             "   (4) Input New Invitation\n"
             "   (X) Exit?\n"
@@ -278,6 +276,41 @@ async def main(
 
             if option is None or option in "xX":
                 break
+            elif option == "1":
+                credentials = await agent.admin_GET(
+                    '/credentials',
+                )
+                log_json(
+                    credentials,
+                    label='credentials'
+                )
+            elif option == "2":
+                presentation_exchange_id = input('presentation_exchange_id: ')
+                request = {
+                    "requested_predicates": {},
+                    "requested_attributes": {
+                        "0_ssn_uuid": {
+                            "cred_id": "512214bc-b42d-4872-aa1c-46055376245a",
+                            "cred_info": "123456789",
+                            "revealed": True
+                        },
+                        "0_address_uuid": {
+                            "cred_id": "512214bc-b42d-4872-aa1c-46055376245a",
+                            "cred_info": "",
+                            "revealed": True
+                        }
+                    },
+                    "self_attested_attributes": {}
+                }
+
+                log_status("#26 Send the proof to X")
+                await self.admin_POST(
+                    (
+                        "/present-proof/records/"
+                        f"{presentation_exchange_id}/send-presentation"
+                    ),
+                    request,
+                )
             elif option == "3":
                 msg = await prompt("Enter message: ")
                 if msg:
