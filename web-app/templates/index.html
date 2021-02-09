@@ -1,0 +1,45 @@
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
+<title>DIDPal Wallet</title>
+
+<body>
+    <h1>
+        <img src="{{ url_for('static', filename = 'pp-logo-white.png') }}" height="33px">
+        Wallet
+    </h1>
+
+    <div class="section" style="display:flex">
+        <img src="{{ url_for('static', filename = 'partners/paypal.png') }}" width="44%">
+    </div><br>
+
+    <form method="POST">
+
+        <div class="section">
+            <h3>Tokens</h3>
+
+            {% for dtype in dtypes %}
+            <div class="token" style="background-color:lightcyan">
+                <input type="checkbox" name="token" value="{{ dtype }}">
+                <label>{{ dtype }}</label>
+            </div><br>
+            {% endfor %}
+        </div><br>
+
+        <div class="section">
+            <h3>New</h3>
+
+            <input type="text" name="dtype" />
+            <label>Datatype</label>
+
+            <input type="text" name="info" />
+            <label>Info</label>
+            <br><br>
+        </div><br>
+
+        <div class="section">
+            <h5>Please review before submitting</h5>
+            <br>
+            <input type="submit">
+        </div><br>
+
+    </form>
+</body>
