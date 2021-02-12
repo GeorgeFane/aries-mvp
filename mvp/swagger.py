@@ -16,6 +16,12 @@ issuer_did = requests.get(
     urls['faber'] + '/wallet/did/public'
 ).json()['result']['did']
 
+'''
+alice_did = requests.get(
+    urls['alice'] + '/wallet/did/public'
+).json()['result']['did']
+'''
+
 schema_ids = requests.get(
     urls['faber'] + '/schemas/created'
 ).json()['schema_ids']
@@ -47,10 +53,20 @@ def issue(dtype, info):
             'cred_def_id': cred_def_id,
             'connection_id': connection_id,
             'credential_proposal': {
-                'attributes':  [{
-                    "name": dtype,
-                    "value": info
-                }]
+                'attributes':  [
+                    {
+                        "name": dtype,
+                        "value": info
+                    },
+                    {
+                        "name": 'issuer',
+                        "value": issuer_did
+                    },
+                    {
+                        "name": 'holder',
+                        "value": 'Alice\'s DID (TODO)'
+                    },
+                ]
             }
         }
     )
@@ -76,35 +92,4 @@ def present(dtypes: list):
     requests.post(
         urls['faber'] + "/present-proof/send-request", 
         json=proof_request_web_request
-    )
-
-    return
-
-    start = urls['alice'] + f'/present-proof/records/{presentation_exchange_id}'
-    credentials = requests.get(start + '/credentials').json()
-
-    requested_attributes = []
-    for dtype in dtypes:
-        for cred in credentials:
-            cred_info = cred['cred_info']['attrs'].get(dtype)
-            if cred_info:
-                requested_attributes.append(
-                    {
-                        f'0_{dtype}_uuid': {
-                            'cred_id': cred['cred_info']['referent'],
-                            'cred_info': cred_info,
-                            'revealed': True
-                        }
-                    }
-                )
-                break
-    print('requested_attributes\n', requested_attributes)
-
-    requests.post(
-        start + '/send-presentation',
-        json={
-            'requested_predicates': {},
-            'self_attested_attributes': {},
-            'requested_attributes': requested_attributes
-        }
     )

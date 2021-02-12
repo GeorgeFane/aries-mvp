@@ -24,10 +24,8 @@ def index():
     ).json()['results']
 
     dtypes = set([
-        key
+        cred['cred_def_id'].split('.')[-1]
         for cred in results
-        for key, value in cred['attrs'].items()
-        if value
     ])
         
     return render_template(
