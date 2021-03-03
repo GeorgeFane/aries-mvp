@@ -3,76 +3,95 @@ import json
 from pprint import pprint
 import time
 
-urls = {
+admin = {
     'faber': 'http://0.0.0.0:8021',
     'alice': 'http://0.0.0.0:8031'
 }
 
-connection_id = requests.get(
-    urls['faber'] + '/connections'
-).json()['results'][0]['connection_id']
-
 issuer_did = requests.get(
-    urls['faber'] + '/wallet/did/public'
+    admin['faber'] + '/wallet/did/public'
 ).json()['result']['did']
 
-'''
-alice_did = requests.get(
-    urls['alice'] + '/wallet/did/public'
-).json()['result']['did']
-'''
-
-schema_ids = requests.get(
-    urls['faber'] + '/schemas/created'
-).json()['schema_ids']
-
-credential_definition_ids = requests.get(
-    urls['faber'] + '/credential-definitions/created'
+definitions = requests.get(
+    admin['faber'] + '/credential-definitions/created'
 ).json()['credential_definition_ids']
 
-headers = [
-    s.split('.')[-1] for s in credential_definition_ids
+keys = [
+    s.split(':')[-1] for s in definitions
 ]
 pairs = dict(
     zip(
-        headers, credential_definition_ids
+        keys, definitions
     )
 )
-print(pairs)
 
-presentation_exchange_id = '5c69c270-c43d-4aa6-97f5-45e2cdc5a2a2'
+def register(dtype):
+    if dtype in keys:
+        return
 
-def issue(dtype, info):
+    schema_body = {
+        "schema_name": dtype,
+        "schema_version": '1.1.1',
+        "attributes": [dtype, 'issuer', 'holder', 'timestamp'],
+    }    
+    schema_response = requests.post(
+        admin['faber'] + "/schemas", 
+        json=schema_body
+    ).json()
+
+    schema_id = schema_response["schema_id"]
+    credential_definition_body = {
+        "schema_id": schema_id,
+        "tag": dtype
+    }
+    cred_def_response = requests.post(
+        admin['faber'] + "/credential-definitions", 
+        json=credential_definition_body
+    ).json()
+
+    cred_def_id = cred_def_response["credential_definition_id"]   
+    return schema_id, cred_def_id
+
+def issue(dtype, info, holder):
     cred_def_id = pairs[dtype]
+    connection_id = requests.get(
+        admin['faber'] + '/connections'
+    ).json()['results'][0]['connection_id']
 
-    requests.post(
-        urls['faber'] + '/issue-credential/send',
-        json={
-            'issuer_did': issuer_did,
-            'schema_id': f'{issuer_did}:2:{dtype}:1.1.1',
-            'cred_def_id': cred_def_id,
-            'connection_id': connection_id,
-            'credential_proposal': {
-                'attributes':  [
-                    {
-                        "name": dtype,
-                        "value": info
-                    },
-                    {
-                        "name": 'issuer',
-                        "value": issuer_did
-                    },
-                    {
-                        "name": 'holder',
-                        "value": 'Alice\'s DID (TODO)'
-                    },
-                ]
-            }
-        }
-    )
+    cred_attrs = {
+        "holder": holder,
+        "issuer": issuer_did,
+        dtype: info,
+        'timestamp': str(int(time.time()))
+    }
+
+    cred_preview = {
+        "@type": "https://didcomm.org/issue-credential/2.0/credential-preview",
+        "attributes": [
+            {"name": n, "value": v}
+            for (n, v) in cred_attrs.items()
+        ],
+    }
+    
+    offer_request = {
+        "connection_id": connection_id,
+        "comment": f"Offer on cred def id {cred_def_id}",
+        "auto_remove": False,
+        "credential_preview": cred_preview,
+        "filter": {"indy": {"cred_def_id": cred_def_id}},
+        "trace": False,
+    }
+
+    return requests.post(
+        admin['faber'] + "/issue-credential-2.0/send-offer", 
+        json=offer_request
+    ).json()
 
 def present(dtypes: list):
     req_attrs = [{'name': dtype} for dtype in dtypes]
+    connection_id = requests.get(
+        admin['faber'] + '/connections'
+    ).json()['results'][0]['connection_id']
 
     indy_proof_request = {
         "name": "Proof of KYC",
@@ -89,7 +108,7 @@ def present(dtypes: list):
         "trace": False,
     }
 
-    requests.post(
-        urls['faber'] + "/present-proof/send-request", 
+    return requests.post(
+        admin['faber'] + "/present-proof/send-request", 
         json=proof_request_web_request
     )
