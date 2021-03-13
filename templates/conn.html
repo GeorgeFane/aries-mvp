@@ -1,45 +1,29 @@
-<title>DIDPal Wallet</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
+<title>MVP</title>
 
-<script>
-function myFunction() {
-    var copyText = document.getElementById("myInput");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    document.execCommand("copy");
-    alert("Copied the text: " + copyText.value);
-}
-</script>
+<h1>DIDPal Wallet</h1>
 
-<h1 style="background-color: cornflowerblue; color: white; border-radius: 22px; font-family: Verdana, Geneva, Tahoma, sans-serif; padding: 22px;">
-    <img src="{{ url_for('static', filename = 'pp-logo-white.png') }}" height="33px">
-    Wallet
-</h1>
-
-<div style="display:flex">
-
-    <img src="{{ url_for('static', filename='qrcode.png') }}" width="22%">    
-
-    <div>
-        <br><br>
-        <textarea id="myInput" rows="9" cols="77">{{ inv }}</textarea>
-        <br>
-
-        <button onclick="myFunction()">Copy text</button>
-    </div>
-
-</div>
-
-<div>
+<div class="section">
+    <h3>Connect</h3>
 
     <form method="POST">
+        <label>
+            Scan QR Code 
+        </label>
+        <img src="{{ url_for('static', filename='camera.png') }}" width="9%">
+        <br><br>
 
-        {% for name in 'invitation user pass'.split() %}
-        <input type="text" name="{{ name }}">
-        {{ name }}
-        <br>
-        {% endfor %}
+        <label>
+            or
+        </label>
+        <br><br>
+
+        <label>
+            Paste Invitation
+        </label>
+        <input type="text" name="invitation">
+        <br><br>
         
         <input type="submit">
     </form>
-
 </div>

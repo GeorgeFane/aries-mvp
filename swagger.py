@@ -24,7 +24,7 @@ definitions = requests.get(
 # ids look like HcnMNFeUxjX1AzpDuP7ZzD:3:CL:52015:ssn
 # so split by colon and get last thing
 keys = [
-    s.split(':')[-1] for s in definitions
+    s.split('.')[-1] for s in definitions
 ]
 
 # easy access cred def ids
@@ -34,6 +34,7 @@ pairs = dict(
         keys, definitions
     )
 )
+print(pairs)
 
 def register(dtype):
     # avoid registering same def twice
@@ -55,7 +56,7 @@ def register(dtype):
     schema_id = schema_response["schema_id"]
     credential_definition_body = {
         "schema_id": schema_id,
-        "tag": dtype
+        "tag": 'Faber.Agent.' + dtype
     }
     cred_def_response = requests.post(
         admin['faber'] + "/credential-definitions", 
@@ -102,6 +103,7 @@ def issue(dtype, info, holder):
         "filter": {"indy": {"cred_def_id": cred_def_id}},
         "trace": False,
     }
+    pprint(offer_request)
 
     # returned value not used
     # should check if this contains cred id, to store in user's subwallet
@@ -135,6 +137,7 @@ def present(dtypes: list):
         "proof_request": indy_proof_request,
         "trace": False,
     }
+    pprint(proof_request_web_request)
 
     return requests.post(
         admin['faber'] + "/present-proof/send-request", 

@@ -13,7 +13,9 @@ subwallet = {}
 
 # creates new cred format named ssn
 # with attrs: ssn, issuer, holder, timestamp
-register('ssn')
+attrs = 'ssn address'.split()
+for x in attrs:
+    register(x)
 
 # for presenting creds and getting the FSP to issue you creds
 @app.route('/user/<user>', methods=['POST', 'GET'])
@@ -71,7 +73,7 @@ def index(user):
     # 'cred_def_id' is something long like HcnMNFeUxjX1AzpDuP7ZzD:3:CL:52015:ssn
     # so split by colon to get 'ssn' (cred name) at the end
     dtypes = set([
-        cred['cred_def_id'].split(':')[-1]
+        cred['cred_def_id'].split('.')[-1]
         for cred in results
     ])
 
@@ -79,7 +81,8 @@ def index(user):
     # to show up in user's cred list  
     return render_template(
         'index.html', 
-        dtypes=dtypes
+        dtypes=dtypes,
+        attrs = attrs
     )
 
 # gets ids of all creds across users and deletes by id one-by-one
@@ -96,9 +99,29 @@ def delete():
             admin['alice'] + '/credential/' + cred['referent']
         )
 
-# for forming connections between agents
+# FSPS will embed this SDK in their site
 @app.route('/', methods = ['GET', 'POST'])
-def conn():
+def sdk():
+    # Faber creates invitation json
+    inv = requests.post(
+        admin['faber'] + '/connections/create-invitation'
+    ).json()
+
+    # formatting
+    dumped = json.dumps(
+        inv['invitation'],
+        indent=4
+    )
+    print(dumped)
+
+    return render_template(
+        'sdk.html',
+        inv=dumped
+    )
+
+# for forming connections between agents
+@app.route('/conn/<user>', methods = ['GET', 'POST'])
+def conn(user):
     if request.method == 'POST':
         data = request.form
 
@@ -114,26 +137,13 @@ def conn():
         return redirect(
             url_for(
                 'index',
-                user=data['user']
+                user=user
             )
         )
 
     else:
-        # Faber creates invitation json
-        inv = requests.post(
-            admin['faber'] + '/connections/create-invitation'
-        ).json()
-
-        # formatting
-        dumped = json.dumps(
-            inv['invitation'],
-            indent=4
-        )
-        print(dumped)
-
         return render_template(
-            'conn.html',
-            inv=dumped
+            'conn.html'
         )
 
 app.run(port=8080, debug=True)
