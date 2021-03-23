@@ -112,7 +112,6 @@ def sdk():
         inv['invitation'],
         indent=4
     )
-    print(dumped)
 
     return render_template(
         'sdk.html',

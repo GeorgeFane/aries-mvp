@@ -34,7 +34,6 @@ pairs = dict(
         keys, definitions
     )
 )
-print(pairs)
 
 def register(dtype):
     # avoid registering same def twice
@@ -46,7 +45,10 @@ def register(dtype):
         "schema_name": dtype,
         "schema_version": '1.1.1',
         "attributes": [dtype, 'issuer', 'holder', 'timestamp'],
-    }    
+    }
+    print(f'registering {dtype} schema')    
+    pprint(schema_body)
+    
     schema_response = requests.post(
         admin['faber'] + "/schemas", 
         json=schema_body
