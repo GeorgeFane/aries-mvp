@@ -1,4 +1,8 @@
 
-source \ ~/envs/hello_world/bin/activate
+source ~/envs/hello_world/bin/activate
 cd aries-cloudagent-python/demo
 LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo faber
+
+source ~/envs/hello_world/bin/activate
+cd aries-cloudagent-python/demo
+LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo alice --multitenant

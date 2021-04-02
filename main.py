@@ -2,14 +2,11 @@ from flask import *
 import requests
 import json
 from pprint import pprint
+import time
 
 from swagger import *
 
 app = Flask(__name__)
-
-# stores cred ids for each user
-# faux multi-wallet system
-subwallet = {}
 
 # creates new cred format named ssn
 # with attrs: ssn, issuer, holder, timestamp
@@ -17,61 +14,66 @@ attrs = 'ssn address'.split()
 for x in attrs:
     register(x)
 
-# for presenting creds and getting the FSP to issue you creds
-@app.route('/user/<user>', methods=['POST', 'GET'])
-def index(user):
-    global subwallet
-    print(subwallet)
-
-    # creates storage for user if nonexistent yet
-    if user not in subwallet:
-        subwallet[user] = []
-
+# thank you page, to tell user they're done
+@app.route('/thanks', methods=['POST', 'GET'])
+def thanks():
     if request.method == 'POST':
+        return redirect(url_for('partners'))
+
+    return render_template(
+        'thanks.html'
+    )
+
+# for inputting fresh info
+@app.route('/index', methods=['POST', 'GET'])
+def index():
+    # PII that FSP has, from creds
+    dtypes = request.args.getlist('dtypes')
+
+    # PII that FSP still doesn't have
+    remaining = set(attrs) - set(dtypes)
+
+    if request.method == 'POST' or not remaining:
         data = request.form
 
         # issuing cred
-        if data.get('dtype') and data.get('info'):
-            issue(data['dtype'], data['info'], user)
+        for dtype in remaining:
+            # check if input is not empty
+            if data.get(dtype):
+                issue(dtype, data[dtype])
 
-            # get all credentials across users (not good)
-            creds = requests.get(
-                admin['alice'] + '/credentials'
-            ).json()
+        return redirect(url_for('thanks'))
 
-            # sort by timestamp, most recent first
-            sortedCreds = sorted(
-                creds['results'],
-                key = lambda x: int(x['attrs']['timestamp']),
-                reverse=True
-            )
+    # pass dtypes (creds that user already has)
+    # to show up in user's cred list  
+    return render_template(
+        'input.html',
+        attrs=remaining
+    )
 
-            # get id of most recent cred
-            referent = sortedCreds[0]['referent']
+# for presenting creds, before inputting fresh info
+@app.route('/creds', methods=['POST', 'GET'])
+def creds():    
+    # gets all creds
+    results = requests.get(
+        admin['alice'] + '/credentials'
+    ).json()['results']
 
-            # store id as one of user's
-            subwallet[user].append(referent)
+    if request.method == 'POST' or not results:
+        data = request.form
         
         # request proof
-        # check box to offer cred
-
         # gets all selected cred types
         dtypes = data.getlist('token')
         if dtypes:
             present(dtypes)
-    
-    # gets creds by id one-by-one
-    # looks at the user's stored ids
-    results = [
-        requests.get(
-            admin['alice'] + '/credential/' + cred_id
-        ).json()
-        for cred_id in subwallet[user]
-    ]
+
+        # pass which creds are presented, so don't ask
+        return redirect(url_for('index', dtypes=dtypes))
 
     # set() function to avoid repeats
-    # 'cred_def_id' is something long like HcnMNFeUxjX1AzpDuP7ZzD:3:CL:52015:ssn
-    # so split by colon to get 'ssn' (cred name) at the end
+    # 'cred_def_id' is something long like HcnMNFeUxjX1:3:CL:52015:Faber.Agent.ssn
+    # so split by dot to get 'ssn' (cred name) at the end
     dtypes = set([
         cred['cred_def_id'].split('.')[-1]
         for cred in results
@@ -80,9 +82,65 @@ def index(user):
     # pass dtypes (creds that user already has)
     # to show up in user's cred list  
     return render_template(
-        'index.html', 
+        'creds.html', 
         dtypes=dtypes,
-        attrs = attrs
+        attrs=attrs
+    )
+
+# shows held creds and FSP partners
+@app.route('/partners', methods=['GET', 'POSt'])
+def partners():    
+    if request.method == 'POST':
+        # the method is POST if the user taps an FSP's icon
+
+        # Faber creates invitation json
+        # in final version, user gets an invitation specific to the FSP they tapped
+        invitation = requests.post(
+            admin['faber'] + '/connections/create-invitation'
+        ).json()['invitation']
+
+        # Alice accepts invitation
+        connection = requests.post(
+            admin['alice'] + '/connections/receive-invitation',
+            json=invitation
+        ).json()
+
+        print()
+        print('CONNECTED WITH FSP')
+        pprint(connection)
+
+        return redirect(url_for('creds'))
+
+    print()
+    print('IMAGINE CREDS SHOW UP AFTER A COUPLE DAYS (VERIFICATION)')
+    print('HOME SCREEN')
+
+    # gets all creds
+    results = requests.get(
+        admin['alice'] + '/credentials'
+    ).json()['results']
+
+    # get format names of held creds
+    dtypes = set([
+        cred['cred_def_id'].split('.')[-1]
+        for cred in results
+    ])
+
+    # pass dtypes (creds that user already has)
+    # to show up in user's cred list  
+    return render_template(
+        'partners.html', 
+        dtypes=dtypes
+    )
+
+@app.route('/', methods=['GET', 'POST'])
+def login(): 
+    if request.method == 'POST':
+        return redirect(url_for('partners'))
+
+    print('LOGIN SCREEN')
+    return render_template(
+        'login.html'
     )
 
 # gets ids of all creds across users and deletes by id one-by-one
@@ -99,50 +157,6 @@ def delete():
             admin['alice'] + '/credential/' + cred['referent']
         )
 
-# FSPS will embed this SDK in their site
-@app.route('/', methods = ['GET', 'POST'])
-def sdk():
-    # Faber creates invitation json
-    inv = requests.post(
-        admin['faber'] + '/connections/create-invitation'
-    ).json()
-
-    # formatting
-    dumped = json.dumps(
-        inv['invitation'],
-        indent=4
-    )
-
-    return render_template(
-        'sdk.html',
-        inv=dumped
-    )
-
-# for forming connections between agents
-@app.route('/conn/<user>', methods = ['GET', 'POST'])
-def conn(user):
-    if request.method == 'POST':
-        data = request.form
-
-        # Alice agent stores invitation cred in wallet,
-        # activates it, and sends corresponding invitation to Faber
-        requests.post(
-            admin['alice'] + '/connections/receive-invitation',
-            data=data['invitation']
-        )
-
-        # redirect to user page of whatever name user submitted
-        # no actual secure login system yet
-        return redirect(
-            url_for(
-                'index',
-                user=user
-            )
-        )
-
-    else:
-        return render_template(
-            'conn.html'
-        )
+    return redirect(url_for('partners'))
 
 app.run(port=8080, debug=True)

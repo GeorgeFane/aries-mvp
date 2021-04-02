@@ -1,0 +1,25 @@
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
+<title>MVP</title>
+
+<h1>DIDPal Wallet</h1>
+
+<form method="POST">
+
+    <div class="section">
+        <h3>New</h3>
+
+        {% for x in attrs %}
+        <input type="text" name="{{ x }}" />
+        <label>{{ x }}</label>
+        <br>
+        {% endfor %}
+
+    </div><br>
+
+    <div class="section">
+        <h5>Please review before submitting</h5>
+        <br>
+        <input type="submit">
+    </div><br>
+
+</form>

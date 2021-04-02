@@ -14,6 +14,14 @@ issuer_did = requests.get(
     admin['faber'] + '/wallet/did/public'
 ).json()['result']['did']
 
+# get Alice DID
+holder_did = 'temp'
+'''
+requests.get(
+    admin['alice'] + '/wallet/did/public'
+).json()['result']['did']
+'''
+
 # get list of ids of cred defs that Faber made
 # should be 2 things: default education cred from Aries and ssn
 definitions = requests.get(
@@ -46,6 +54,8 @@ def register(dtype):
         "schema_version": '1.1.1',
         "attributes": [dtype, 'issuer', 'holder', 'timestamp'],
     }
+
+    print()
     print(f'registering {dtype} schema')    
     pprint(schema_body)
     
@@ -69,7 +79,7 @@ def register(dtype):
     cred_def_id = cred_def_response["credential_definition_id"]   
     return schema_id, cred_def_id
 
-def issue(dtype, info, holder):
+def issue(dtype, info):
     cred_def_id = pairs[dtype]
 
     # gets Faber's connection id to Alice
@@ -80,7 +90,7 @@ def issue(dtype, info, holder):
 
     # set attrs to pass
     cred_attrs = {
-        "holder": holder,
+        "holder": holder_did,
         "issuer": issuer_did,
         dtype: info,
         'timestamp': str(int(time.time()))
@@ -105,6 +115,9 @@ def issue(dtype, info, holder):
         "filter": {"indy": {"cred_def_id": cred_def_id}},
         "trace": False,
     }
+
+    print()
+    print(f'CREDENTIAL OFFER')
     pprint(offer_request)
 
     # returned value not used
@@ -139,6 +152,9 @@ def present(dtypes: list):
         "proof_request": indy_proof_request,
         "trace": False,
     }
+
+    print()
+    print('PRESENTATION REQUEST')
     pprint(proof_request_web_request)
 
     return requests.post(

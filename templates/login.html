@@ -1,0 +1,47 @@
+<link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
+<title>MVP</title>
+
+<h1>DIDPal Wallet</h1>
+
+<form method="POST">
+    <div class="section">
+        <h3>Sign Up</h3>
+
+        <label>Name</label>
+        <input type="text" name="name">
+        <br><br>
+
+        <label>Email</label>
+        <input type="text" name="email">
+        <br><br>
+
+        <label>Password</label>
+        <input type="password" name="email">
+        <br><br>
+
+        <label>Confirm Password</label>
+        <input type="password" name="email">
+        <br><br>
+
+        <input type="submit">
+    </div>
+
+    <hr size=9 color="black">
+
+    <div class="section">
+        <h3>Log In</h3>
+
+        <label>Email</label>
+        <input type="text" name="email">
+        <br><br>
+
+        <label>Password</label>
+        <input type="password" name="email">
+
+        <h5>OR</h5>
+        <label>(Preferred)</label>
+        <br><br>
+
+        <label>Biometrics: Face ID or Fingerprint</label>
+    </div>
+</form>
