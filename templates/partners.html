@@ -1,30 +1,24 @@
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
 <title>MVP</title>
 
-<h1>DIDPal Wallet</h1>
+<div class="screen">
+    <h1>Verify with PayPal</h1>
 
-<div class="section">
-    <h3>Credentials</h3>
+    <img src="static/pp.png" width=44%>
 
-    {% for dtype in dtypes %}
-    <div class="token" style="background-color:lightcyan">
-        <label>{{ dtype }}</label>
-    </div><br>
-    {% endfor %}
-</div><br>
-
-<form method="POST">
-    <div class="section">
-        <h3>Partners</h3>
-        <h5>CREATE ACCOUNT WITH:</h5>
+    <form method="POST">
+        <h3>Create Account With</h3>
 
         <label>Search</label>
         <input type="text" name="partner" />
         <br><br>
 
-        {% for partner in 'fidelity goldman paypal'.split() %}
-        <input type="image" width="49%" name="{{ fsp }}" 
-        src="static/partners/{{ partner }}.png">
-        {% endfor %}
-    </div><br>
-</form>
+        <div style="overflow-y: scroll; height: 44%;">    
+            {% for partner in dir_list %}
+            <input type="image" width="49%" name="{{ fsp }}" 
+            src="static/partners/{{ partner }}">
+            {% endfor %}
+        </div>
+        
+    </form>
+</div>

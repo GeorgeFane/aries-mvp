@@ -3,6 +3,7 @@ import requests
 import json
 from pprint import pprint
 import time
+import os
 
 from swagger import *
 
@@ -12,6 +13,7 @@ app = Flask(__name__)
 # with attrs: ssn, issuer, holder, timestamp
 attrs = 'ssn address'.split()
 for x in attrs:
+    pass
     register(x)
 
 # thank you page, to tell user they're done
@@ -42,7 +44,7 @@ def index():
             if data.get(dtype):
                 issue(dtype, data[dtype])
 
-        return redirect(url_for('thanks'))
+        return redirect(url_for('partners'))
 
     # pass dtypes (creds that user already has)
     # to show up in user's cred list  
@@ -112,25 +114,16 @@ def partners():
         return redirect(url_for('creds'))
 
     print()
-    print('IMAGINE CREDS SHOW UP AFTER A COUPLE DAYS (VERIFICATION)')
     print('HOME SCREEN')
 
-    # gets all creds
-    results = requests.get(
-        admin['alice'] + '/credentials'
-    ).json()['results']
-
-    # get format names of held creds
-    dtypes = set([
-        cred['cred_def_id'].split('.')[-1]
-        for cred in results
-    ])
+    path = "static//partners"
+    dir_list = os.listdir(path)
 
     # pass dtypes (creds that user already has)
     # to show up in user's cred list  
     return render_template(
         'partners.html', 
-        dtypes=dtypes
+        dir_list=dir_list
     )
 
 @app.route('/', methods=['GET', 'POST'])

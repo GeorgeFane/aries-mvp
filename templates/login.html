@@ -1,47 +1,42 @@
 <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='paypal.css') }}">
 <title>MVP</title>
 
-<h1>DIDPal Wallet</h1>
+<div class="screen">
+    <h1>Verify with PayPal</h1>
 
-<form method="POST">
-    <div class="section">
+    <img src="static/pp.png" width=44%>
+
+    <form method="POST">
         <h3>Sign Up</h3>
 
         <label>Name</label>
         <input type="text" name="name">
-        <br><br>
+        <br>
 
         <label>Email</label>
         <input type="text" name="email">
-        <br><br>
+        <br>
 
         <label>Password</label>
         <input type="password" name="email">
-        <br><br>
+        <br>
 
         <label>Confirm Password</label>
         <input type="password" name="email">
-        <br><br>
 
-        <input type="submit">
-    </div>
+        <!--
+        <hr size=3 color="black">
 
-    <hr size=9 color="black">
-
-    <div class="section">
         <h3>Log In</h3>
 
         <label>Email</label>
         <input type="text" name="email">
-        <br><br>
+        <br>
 
         <label>Password</label>
-        <input type="password" name="email">
+        <input type="password" name="email">         
+        -->
 
-        <h5>OR</h5>
-        <label>(Preferred)</label>
-        <br><br>
-
-        <label>Biometrics: Face ID or Fingerprint</label>
-    </div>
-</form>
+        <input type="submit">   
+    </form>
+</div>
