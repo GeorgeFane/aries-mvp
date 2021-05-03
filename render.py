@@ -3,6 +3,8 @@ import os
 
 app = Flask(__name__)
 
+print('routes: creds input login partners thanks')
+
 text = 'Date of Birth, Address, Social Security Number'.split(', ')
 
 @app.route('/creds')
@@ -17,11 +19,22 @@ def input():
 def login():
     return render_template('login.html')
 
-@app.route('/partners')
+@app.route('/partners', methods=['GET', 'POST'])
 def partners():
+    if request.method == 'POST':
+        return request.form
+
     path = "static//partners"
     dir_list = os.listdir(path)
-    return render_template('partners.html', dir_list=dir_list)
+    partners = [
+        x[:x.index('.')]
+        for x in dir_list
+    ]
+
+    return render_template(
+        'partners.html', 
+        partners=partners
+    )
 
 @app.route('/thanks')
 def thanks():

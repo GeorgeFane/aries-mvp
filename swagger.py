@@ -3,6 +3,9 @@ import json
 from pprint import pprint
 import time
 
+with open('chain.txt', 'w') as f:
+    f.write('Chain:\n')
+
 # admin API routes
 admin = {
     'faber': 'http://0.0.0.0:8021',
@@ -15,7 +18,7 @@ issuer_did = requests.get(
 ).json()['result']['did']
 
 # get Alice DID
-holder_did = 'temp'
+holder_did = 'holder_did (temp)'
 '''
 requests.get(
     admin['alice'] + '/wallet/did/public'
@@ -78,6 +81,21 @@ def register(dtype):
     # returned vals not stored, but Aries sample does this
     cred_def_id = cred_def_response["credential_definition_id"]   
     return schema_id, cred_def_id
+
+def publish(partner, dtype):
+    content = {
+        'issuer': partner + ' ' + issuer_did,
+        'dtype': dtype,
+        'holder': holder_did
+    }
+    
+    with open('chain.txt', 'a') as f:
+        json.dump(content, f, indent=4)
+        f.write(',\n')
+
+    print()
+    print(f'PUBLISH ISSUANCE TO CHAIN')
+    pprint(content)
 
 def issue(dtype, info):
     cred_def_id = pairs[dtype]

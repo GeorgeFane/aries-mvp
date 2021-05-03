@@ -9,16 +9,16 @@
     <form method="POST">
         <h3>Create Account With</h3>
 
-        <label>Search</label>
-        <input type="text" name="partner" />
-        <br><br>
-
-        <div style="overflow-y: scroll; height: 44%;">    
-            {% for partner in dir_list %}
-            <input type="image" width="49%" name="{{ fsp }}" 
-            src="static/partners/{{ partner }}">
+        <div style="overflow-y: scroll; height: 49%;">
+            {% for partner in partners %}
+            <label>
+                <input type="radio" name="partner" value="{{ partner }}" checked>
+                <img src="static/partners/{{ partner }}.png" width=44%>
+            </label>
             {% endfor %}
         </div>
+
+        <input type="submit">
         
     </form>
 </div>

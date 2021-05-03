@@ -1,0 +1,16 @@
+Chain:
+{
+    "issuer": "Edward Jones R5e2gVBcVRXjBe6TwXAbNi",
+    "dtype": "address",
+    "holder": "holder_did (temp)"
+},
+{
+    "issuer": "Edward Jones R5e2gVBcVRXjBe6TwXAbNi",
+    "dtype": "ssn",
+    "holder": "holder_did (temp)"
+},
+{
+    "issuer": "Goldman Sachs R5e2gVBcVRXjBe6TwXAbNi",
+    "dtype": "ssn",
+    "holder": "holder_did (temp)"
+},
